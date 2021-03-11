@@ -1,0 +1,108 @@
+import json
+import collections
+import tokenization
+import tensorflow as tf
+def read_query(file):
+	print('Read query json file...')
+	with open(file) as json_file:
+		data = json.load(json_file)
+	return data
+
+def read_rank_list(file):
+	print('Read rank list...')
+	qid_to_docid = collections.defaultdict(list)
+	with open(file) as f:
+		for line in f:
+			line = line.strip().split('\t')
+			qid = line[0]
+			docid = line[1]
+			qid_to_docid[qid].append(docid)
+	return qid_to_docid
+
+def read_corpus(file):
+	print('Read rank list...')
+	docid_to_doc = {}
+	with open(file) as f:
+		for line in f:
+			line = line.strip().split('\t')
+			docid = line[0]
+			doc = line[1]
+			docid_to_doc[docid] = doc
+	return docid_to_doc
+
+def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels,
+					ids_file=None, query_id=None, doc_ids=None, is_train=True):
+	feature = {}
+	raw_query = tokenization.convert_to_unicode(query)
+	if '|' in raw_query:
+		context ='|'.join(raw_query.split('|')[:-1])
+		raw_query = raw_query.split('|')[-1]
+		raw_query_token_ids, raw_query_segment_ids, raw_query_mask = tokenization.convert_to_coversation_query(
+			context=context, query='[Q] '+raw_query, max_context_length=100, max_query_length=FLAGS.max_query_length, tokenizer=tokenizer,
+			add_cls=True, padding_mask=True)
+
+	else:
+		raw_query_token_ids = tokenization.convert_to_colbert_input(
+			text='[Q] '+raw_query, max_seq_length=FLAGS.max_query_length, tokenizer=tokenizer,
+			add_cls=True, padding_mask=True)
+		raw_query_mask = [0]*4 + [1]*(len(raw_query_token_ids)-4)
+		raw_query_segment_ids = [0]*1 + [1]*(len(raw_query_token_ids)-1)
+
+	raw_query_token_ids_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=raw_query_token_ids))
+	raw_query_segment_ids_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=raw_query_segment_ids))
+	raw_raw_query_mask_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=raw_query_mask))
+
+
+	feature['raw_query_ids']=raw_query_token_ids_tf
+	feature['raw_query_segment_ids']=raw_query_segment_ids_tf
+	feature['raw_query_mask']=raw_query_mask_tf
+
+	rewrite_query_token_ids = tokenization.convert_to_colbert_input(
+			text='[Q] '+rewrite_query, max_seq_length=FLAGS.max_query_length, tokenizer=tokenizer,
+			add_cls=True, padding_mask=True)
+	rewrite_query_mask = [0]*4 + [1]*(len(rewrite_query_token_ids)-4)
+	rewrite_query_segment_ids = [0]*1 + [1]*(len(rewrite_query_token_ids)-1)
+
+	rewrite_query_token_ids_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=rewrite_query_token_ids))
+	rewrite_query_segment_ids_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=rewrite_query_segment_ids))
+	rewrite_raw_query_mask_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=rewrite_query_mask))
+	feature['rewrite_query_ids']=rewrite_query_token_ids_tf
+	feature['rewrite_query_segment_ids']=rewrite_query_segment_ids_tf
+	feature['rewrite_query_mask']=rewrite_query_mask_tf
+
+	for i, (doc_text, label) in enumerate(zip(docs, labels)):
+		doc_token_ids = tokenization.convert_to_colbert_input(
+			text='[D] '+doc_text,
+			max_seq_length=FLAGS.max_seq_length,
+			tokenizer=tokenizer,
+			add_cls=True, padding_mask=False)
+
+		doc_ids_tf = tf.train.Feature(
+			int64_list=tf.train.Int64List(value=doc_token_ids))
+
+		labels_tf = tf.train.Feature(
+			int64_list=tf.train.Int64List(value=[label]))
+
+	if is_train:
+		feature['doc_ids'+str(label)]=doc_ids_tf
+	else:
+		feature['doc_ids']=doc_ids_tf
+
+
+	feature['label']=labels_tf
+	if ids_file:
+		ids_file.write('\t'.join([query_id, doc_ids[i]]) + '\n')
+	if not is_train:
+		features = tf.train.Features(feature=feature)
+		example = tf.train.Example(features=features)
+		writer.write(example.SerializeToString())
+	if is_train:
+		features = tf.train.Features(feature=feature)
+		example = tf.train.Example(features=features)
+		writer.write(example.SerializeToString())
