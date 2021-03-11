@@ -24,26 +24,30 @@ def read_corpus(file):
 	docid_to_doc = {}
 	with open(file) as f:
 		for line in f:
-			line = line.strip().split('\t')
-			docid = line[0]
-			doc = line[1]
-			docid_to_doc[docid] = doc
+			try:
+				line = line.strip().split('\t')
+				docid = line[0]
+				doc = line[1]
+				docid_to_doc[docid] = doc
+			except:
+				print('no content')
+
 	return docid_to_doc
 
 def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels,
-					ids_file=None, query_id=None, doc_ids=None, is_train=True):
+					max_query_length=36, max_doc_length=154, ids_file=None, query_id=None, doc_ids=None, is_train=True):
 	feature = {}
-	raw_query = tokenization.convert_to_unicode(query)
+	raw_query = tokenization.convert_to_unicode(raw_query)
 	if '|' in raw_query:
 		context ='|'.join(raw_query.split('|')[:-1])
 		raw_query = raw_query.split('|')[-1]
 		raw_query_token_ids, raw_query_segment_ids, raw_query_mask = tokenization.convert_to_coversation_query(
-			context=context, query='[Q] '+raw_query, max_context_length=100, max_query_length=FLAGS.max_query_length, tokenizer=tokenizer,
+			context=context, query='[Q] '+raw_query, max_context_length=100, max_query_length=max_query_length, tokenizer=tokenizer,
 			add_cls=True, padding_mask=True)
 
 	else:
 		raw_query_token_ids = tokenization.convert_to_colbert_input(
-			text='[Q] '+raw_query, max_seq_length=FLAGS.max_query_length, tokenizer=tokenizer,
+			text='[Q] '+raw_query, max_seq_length=max_query_length, tokenizer=tokenizer,
 			add_cls=True, padding_mask=True)
 		raw_query_mask = [0]*4 + [1]*(len(raw_query_token_ids)-4)
 		raw_query_segment_ids = [0]*1 + [1]*(len(raw_query_token_ids)-1)
@@ -52,7 +56,7 @@ def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels
 		int64_list=tf.train.Int64List(value=raw_query_token_ids))
 	raw_query_segment_ids_tf = tf.train.Feature(
 		int64_list=tf.train.Int64List(value=raw_query_segment_ids))
-	raw_raw_query_mask_tf = tf.train.Feature(
+	raw_query_mask_tf = tf.train.Feature(
 		int64_list=tf.train.Int64List(value=raw_query_mask))
 
 
@@ -61,7 +65,7 @@ def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels
 	feature['raw_query_mask']=raw_query_mask_tf
 
 	rewrite_query_token_ids = tokenization.convert_to_colbert_input(
-			text='[Q] '+rewrite_query, max_seq_length=FLAGS.max_query_length, tokenizer=tokenizer,
+			text='[Q] '+rewrite_query, max_seq_length=max_query_length, tokenizer=tokenizer,
 			add_cls=True, padding_mask=True)
 	rewrite_query_mask = [0]*4 + [1]*(len(rewrite_query_token_ids)-4)
 	rewrite_query_segment_ids = [0]*1 + [1]*(len(rewrite_query_token_ids)-1)
@@ -70,7 +74,7 @@ def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels
 		int64_list=tf.train.Int64List(value=rewrite_query_token_ids))
 	rewrite_query_segment_ids_tf = tf.train.Feature(
 		int64_list=tf.train.Int64List(value=rewrite_query_segment_ids))
-	rewrite_raw_query_mask_tf = tf.train.Feature(
+	rewrite_query_mask_tf = tf.train.Feature(
 		int64_list=tf.train.Int64List(value=rewrite_query_mask))
 	feature['rewrite_query_ids']=rewrite_query_token_ids_tf
 	feature['rewrite_query_segment_ids']=rewrite_query_segment_ids_tf
@@ -79,7 +83,7 @@ def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels
 	for i, (doc_text, label) in enumerate(zip(docs, labels)):
 		doc_token_ids = tokenization.convert_to_colbert_input(
 			text='[D] '+doc_text,
-			max_seq_length=FLAGS.max_seq_length,
+			max_seq_length=max_doc_length,
 			tokenizer=tokenizer,
 			add_cls=True, padding_mask=False)
 
