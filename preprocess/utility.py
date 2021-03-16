@@ -45,6 +45,7 @@ def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels
 			context=context, query='[Q] '+raw_query, max_context_length=100, max_query_length=max_query_length, tokenizer=tokenizer,
 			add_cls=True, padding_mask=True)
 
+
 	else:
 		raw_query_token_ids = tokenization.convert_to_colbert_input(
 			text='[Q] '+raw_query, max_seq_length=max_query_length, tokenizer=tokenizer,
@@ -93,19 +94,19 @@ def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels
 		labels_tf = tf.train.Feature(
 			int64_list=tf.train.Int64List(value=[label]))
 
-	if is_train:
-		feature['doc_ids'+str(label)]=doc_ids_tf
-	else:
-		feature['doc_ids']=doc_ids_tf
+		if is_train:
+			feature['doc_ids'+str(label)]=doc_ids_tf
+		else:
+			feature['doc_ids']=doc_ids_tf
 
 
-	feature['label']=labels_tf
-	if ids_file:
-		ids_file.write('\t'.join([query_id, doc_ids[i]]) + '\n')
-	if not is_train:
-		features = tf.train.Features(feature=feature)
-		example = tf.train.Example(features=features)
-		writer.write(example.SerializeToString())
+		feature['label']=labels_tf
+		if ids_file:
+			ids_file.write('\t'.join([query_id, doc_ids[i]]) + '\n')
+		if not is_train:
+			features = tf.train.Features(feature=feature)
+			example = tf.train.Example(features=features)
+			writer.write(example.SerializeToString())
 	if is_train:
 		features = tf.train.Features(feature=feature)
 		example = tf.train.Example(features=features)
