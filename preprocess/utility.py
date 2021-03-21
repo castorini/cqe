@@ -34,7 +34,7 @@ def read_corpus(file):
 
 	return docid_to_doc
 
-def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels,
+def write_triplet_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels,
 					max_query_length=36, max_doc_length=154, ids_file=None, query_id=None, doc_ids=None, is_train=True):
 	feature = {}
 	raw_query = tokenization.convert_to_unicode(raw_query)
@@ -111,3 +111,42 @@ def write_to_tf_record(writer, tokenizer, raw_query, rewrite_query, docs, labels
 		features = tf.train.Features(feature=feature)
 		example = tf.train.Example(features=features)
 		writer.write(example.SerializeToString())
+
+def write_query_to_tf_record(writer, tokenizer, raw_query, qid, max_query_length=36):
+	feature = {}
+	raw_query = tokenization.convert_to_unicode(raw_query)
+	if '|' in raw_query:
+		context ='|'.join(raw_query.split('|')[:-1])
+		raw_query = raw_query.split('|')[-1]
+		raw_query_token_ids, raw_query_segment_ids, raw_query_mask = tokenization.convert_to_coversation_query(
+			context=context, query='[Q] '+raw_query, max_context_length=100, max_query_length=max_query_length, tokenizer=tokenizer,
+			add_cls=True, padding_mask=True)
+
+
+	else:
+		raw_query_token_ids = tokenization.convert_to_colbert_input(
+			text='[Q] '+raw_query, max_seq_length=max_query_length, tokenizer=tokenizer,
+			add_cls=True, padding_mask=True)
+		raw_query_mask = [0]*4 + [1]*(len(raw_query_token_ids)-4)
+		raw_query_segment_ids = [0]*1 + [1]*(len(raw_query_token_ids)-1)
+
+	raw_query_token_ids_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=raw_query_token_ids))
+	raw_query_segment_ids_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=raw_query_segment_ids))
+	raw_query_mask_tf = tf.train.Feature(
+		int64_list=tf.train.Int64List(value=raw_query_mask))
+	qid_tf = tf.train.Feature(
+      int64_list=tf.train.Int64List(value=[qid]))
+
+
+	feature['raw_query_ids']=raw_query_token_ids_tf
+	feature['raw_query_segment_ids']=raw_query_segment_ids_tf
+	feature['raw_query_mask']=raw_query_mask_tf
+	feature['query_id']=qid_tf
+
+
+	features = tf.train.Features(feature=feature)
+	example = tf.train.Example(features=features)
+	writer.write(example.SerializeToString())
+

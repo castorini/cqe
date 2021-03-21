@@ -1,5 +1,5 @@
 import argparse
-from utility import read_query, read_rank_list, read_corpus, write_to_tf_record
+from utility import read_query, read_rank_list, read_corpus, write_triplet_to_tf_record
 import random
 import tensorflow.compat.v1 as tf
 import tokenization
@@ -47,7 +47,7 @@ def main():
 				neg_docid = random.sample(docids[:200], 1)[0]
 				pos_doc = docid_to_doc[pos_docid]
 				neg_doc = docid_to_doc[neg_docid]
-				write_to_tf_record(writer,
+				write_triplet_to_tf_record(writer,
 								   tokenizer=tokenizer,
 								   raw_query=raw_query,
 								   rewrite_query=rewrite_query,
