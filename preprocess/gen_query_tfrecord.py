@@ -17,8 +17,7 @@ def main():
 	qid_to_query = read_corpus(args.query_file)
 	writer = tf.python_io.TFRecordWriter(
 		args.output_file+'.tf')
-	id_writer = tf.python_io.TFRecordWriter(
-		args.output_file+'.id')
+	id_writer = open(args.output_file+'.id', 'w')
 	widgets = ['Progress: ',Percentage(), ' ', Bar('#'),' ', Timer(),
 		' ', ETA(), ' ', FileTransferSpeed()]
 	pbar = ProgressBar(widgets=widgets, maxval=10*len(qid_to_query)).start()
