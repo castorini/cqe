@@ -1,1 +1,1 @@
-# Contextualized Query Embeddings for Conversational Search
+# Contextualized Query Embeddings for Conversational Search (CQE)
