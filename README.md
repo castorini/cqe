@@ -136,7 +136,7 @@ ndcg_cut_1000           all     0.6107
 recall_100              all     0.5804
 recall_1000             all     0.8543
 ```
-## CQE fusion
+## CQE fusion optimized for top ranking
 To optimize the top fusion ranking result (NDCG@3), we tune the threshold for term selection and conduct sparse search again.
 ```shell=bash
 #Sparse search
