@@ -1,7 +1,6 @@
 # Contextualized Query Embeddings for Conversational Search (CQE)
 The repo is the code for our paper:
-*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin
-In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb).
+*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb).
 ## Prepare
 ```shell=bash
 git clone https://github.com/daltonj/treccastweb.git
