@@ -47,7 +47,7 @@ done
 python ./CQE/dr/index.py --index_path ${INDEX_PATH} \
      --corpus_emb_path ${CORPUS_EMB} --merge_index --passages_per_file 1000000 --max_passage_each_index 10000000 \
 ```
-## CQE Embedding Output and Search
+## CQE Embedding output and dense Search
 ```shell=bash
 python ./CQE/tfrecord_generation/gen_query_tfrecord.py \
      --query_file ./treccastweb/2019/data/evaluation/evaluation_topics_v1.0.json \
@@ -95,6 +95,8 @@ recall_100              all     0.5215
 recall_1000             all     0.7843
 ######################################
 ```
+## CQE sparse search
+We use CQE L2 norm to select tokens from historical context and also as the term weights for BM25 search.
 ```shell=bash
 #Sparse search
 python ./CQE/retrieval/sparse.search.py --topk 1000  --threshold 10 \
@@ -114,7 +116,10 @@ ndcg_cut_1000           all     0.4632
 recall_100              all     0.3808
 recall_1000             all     0.7740
 ######################################
-
+```
+## CQE fusion
+We directly conduct fusion on the sparse and dense ranking lists.
+```shell=bash
 #Fusion
 python ./CQE/retrieval/fuse.py --topk 1000 --rank_file0 ${DATA_DIR}/${QUERY_NAME}.dense.result.trec \
                                --rank_file1 ${DATA_DIR}/${QUERY_NAME}.sparse.result.trec \
@@ -131,7 +136,8 @@ ndcg_cut_1000           all     0.6107
 recall_100              all     0.5804
 recall_1000             all     0.8543
 ```
-
+## CQE fusion
+To optimize the top fusion ranking result (NDCG@3), we tune the threshold for term selection and conduct sparse search again.
 ```shell=bash
 #Sparse search
 python ./CQE/retrieval/sparse.search.py --topk 1000 --threshold 12 \
