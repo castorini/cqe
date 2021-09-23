@@ -15,6 +15,58 @@ export QUERY_NAME=cas2019.eval
 export INDEX_PATH=${DATA_DIR}/indexes
 export INTERMEDIATE_PATH=${DATA_DIR}/intermediate
 ```
+## Training Data preprocess
+```shell=bash
+export TRAIN_DATA_FOLDER=training_data
+mkdir ${TRAIN_DATA_FOLDER}
+
+# Download CANARD dataset
+cd ${TRAIN_DATA_FOLDER}
+wget https://www.google.com/url?q=https%3A%2F%2Fobj.umiacs.umd.edu%2Felgohary%2FCANARD_Release.zip&sa=D&sntz=1&usg=AFQjCNFjxS-s55iJG-fpq5Ur_uakAOJILw
+unzip CANARD_Release.zip 
+
+# Download QUAC dataset
+mkdir QUAC
+cd QUAC
+wget https://s3.amazonaws.com/my89public/quac/train_v0.2.json
+wget https://s3.amazonaws.com/my89public/quac/val_v0.2.json
+cd ..
+
+# Download the rank list from reranker
+cd ..
+
+# Generate training data
+python ./CQE/tfrecord_generation/generate_train_data.py --qa_folder ${TRAIN_DATA_FOLDER}/QUAC \
+                              --cqr_folder ${TRAIN_DATA_FOLDER}/CANARD_Release \
+                              --golden_ir_file ${TRAIN_DATA_FOLDER}/colbert_rank_list.tsv \
+                              --corpus ./castv1_corpus/collection.tsv \
+                              --vocab_file ${BERT_MODEL_DIR}/vocab.txt \
+                              --output_folder ${TRAIN_DATA_FOLDER}/tfrecord \
+                              --max_context_length 100 \
+```
+## CQE Finetuning
+```shell=bash
+# Training 
+ctpu up --name=$tpu_address --project=$project --zone=us-central1-f  --tpu-size=v2-8  --tpu-only  --tf-version=1.15.3  --noconf
+python main.py --use_tpu=False \
+               --tpu_address=$tpu_address \
+               --do_train=True \
+               --bert_pretrained_dir=$Your_GS_Folder/uncased_L-12_H-768_A-12 \
+               --init_checkpoint=${tct-colbert} \
+               --data_dir=${TRAIN_DATA_FOLDER}/tfrecord \
+               --train_file=dataset_train_tower.tf \
+               --num_train_steps=10000 \
+               --max_query_length=136 \
+               --output_dir=${CHECKPOINT} \
+               --train_model=student \
+               --eval_model=student \
+               --kd_source=colbert \
+               --loss=kl \
+
+```
+
+
+
 ## Index corpus embedding
 We first split the corpus and convert the text into tfrecord for inference
 ```shell=bash
@@ -134,6 +186,7 @@ ndcg_cut_3              all     0.5069
 ndcg_cut_1000           all     0.6107
 recall_100              all     0.5804
 recall_1000             all     0.8543
+######################################
 ```
 ## CQE fusion optimized for top ranking
 To optimize the top fusion ranking result (NDCG@3), we tune the threshold for term selection and conduct sparse search again.

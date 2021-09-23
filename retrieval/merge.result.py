@@ -85,7 +85,7 @@ def main():
 
 	Index, Score, max_index_num=dedupe_index(Index, Score)
 
-	write_result(qidxs, Index, Score, args.result_file, idx_to_qid, idx_to_docid, args.topk)
+	write_result(qidxs, Index, Score, args.output, idx_to_qid, idx_to_docid, args.topk)
 
 if __name__ == "__main__":
 	main()
