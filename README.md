@@ -1,6 +1,6 @@
 # Contextualized Query Embeddings for Conversational Search (CQE)
 The repo is the code for our paper:
-*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb). If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our previous paper, [In-Batch Negatives for Knowledge Distillation with Tightly-Coupled Teachers for Dense Retrieval](https://aclanthology.org/2021.repl4nlp-1.17/), and follow the below instruction. Or you can directly download the [checkpoint]() and start with corpus index.
+*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb). If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below instruction. Or you can directly download the [checkpoint]() and start with corpus index.
 ## Prepare
 ```shell=bash
 git clone https://github.com/daltonj/treccastweb.git
