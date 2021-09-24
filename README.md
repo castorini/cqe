@@ -17,7 +17,7 @@ export INTERMEDIATE_PATH=${DATA_DIR}/intermediate
 ```
 If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below [instruction](#Training). Or you can directly download the [checkpoint]() and start with [corpus index](#Inference).
 
-#Training
+# Training
 ## Training Data preprocess
 ```shell=bash
 export TRAIN_DATA_FOLDER=training_data
@@ -68,7 +68,7 @@ python main.py --use_tpu=False \
 
 ```
 
-#Inference
+# Inference
 ## Index corpus embedding
 We first split the corpus and convert the text into tfrecord for inference
 ```shell=bash
