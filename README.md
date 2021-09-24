@@ -1,6 +1,6 @@
 # CQE for Conversational Search
 The repo is the code for our EMNLP2021 paper:
-*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb). If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below instruction. Or you can directly download the [checkpoint]() and start with [corpus index]((# Index corpus embedding)).
+*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb).
 ## Prepare
 ```shell=bash
 git clone https://github.com/daltonj/treccastweb.git
@@ -15,6 +15,8 @@ export QUERY_NAME=cas2019.eval
 export INDEX_PATH=${DATA_DIR}/indexes
 export INTERMEDIATE_PATH=${DATA_DIR}/intermediate
 ```
+If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below [instruction](#Training). Or you can directly download the [checkpoint]() and start with [corpus index]((#Inference)).
+#Training
 ## Training Data preprocess
 ```shell=bash
 export TRAIN_DATA_FOLDER=training_data
@@ -64,6 +66,7 @@ python main.py --use_tpu=False \
                --loss=kl \
 
 ```
+#Inference
 ## Index corpus embedding
 We first split the corpus and convert the text into tfrecord for inference
 ```shell=bash
