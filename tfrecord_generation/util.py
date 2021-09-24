@@ -23,7 +23,6 @@ def read_cast_query(file, use_response, index=None, sent_num=1, context_type='la
 		for turn_id, conversations in enumerate(session['turn']):
 			if use_response:
 				pid = conversations['manual_canonical_result_id']
-
 				response = index.doc(pid).raw()
 				response = nlp(response)
 				sentences = [sent.string.strip() for sent in response.sents]

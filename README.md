@@ -1,13 +1,13 @@
 # Contextualized Query Embeddings for Conversational Search (CQE)
 The repo is the code for our paper:
-*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb).
+*[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb). If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our previous paper, [In-Batch Negatives for Knowledge Distillation with Tightly-Coupled Teachers for Dense Retrieval](https://aclanthology.org/2021.repl4nlp-1.17/), and follow the below instruction. Or you can directly download the [checkpoint]() and start with corpus index.
 ## Prepare
 ```shell=bash
 git clone https://github.com/daltonj/treccastweb.git
 wget https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-12_H-768_A-12.zip
 unzip uncased_L-24_H-1024_A-16.zip
 export BERT_MODEL_DIR=./uncased_L-12_H-768_A-12
-export CHECKPOINT=cqe_checkpoint/model.ckpt-10000
+export CHECKPOINT=cqe
 export DATA_DIR=./cast
 export CORPUS_EMB=${DATA_DIR}/doc_emb
 export QUERY_EMB=${DATA_DIR}/query_emb
@@ -64,9 +64,6 @@ python main.py --use_tpu=False \
                --loss=kl \
 
 ```
-
-
-
 ## Index corpus embedding
 We first split the corpus and convert the text into tfrecord for inference
 ```shell=bash
@@ -86,7 +83,7 @@ do
                  --tpu_address=$tpu_address \
                  --do_output=True \
                  --bert_pretrained_dir=${BERT_MODEL_DIR} \
-                 --eval_checkpoint=${CHECKPOINT} \
+                 --eval_checkpoint=${CHECKPOINT}/model.ckpt-10000 \
                  --max_doc_length=154 \
                  --doc_type=1 \
                  --eval_batch_size=100 \
@@ -111,7 +108,7 @@ python ./CQE/train/main.py --use_tpu=False \
           --tpu_address=$tpu_address \
           --do_output=True \
           --bert_pretrained_dir=${BERT_MODEL_DIR} \
-          --eval_checkpoint ${CHECKPOINT} \
+          --eval_checkpoint ${CHECKPOINT}/model.ckpt-10000 \
           --data_dir=query_tfrecord \
           --max_query_length=136 \
           --output_dir=query_emb \

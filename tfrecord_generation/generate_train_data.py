@@ -5,6 +5,7 @@ import tensorflow.compat.v1 as tf
 import tokenization
 import os
 from progressbar import *
+from pyserini.search import SimpleSearcher
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--qa_folder", required=True)
@@ -30,7 +31,9 @@ def main():
 		os.path.join(args.output_folder, 'dataset_train_tower.tf'))
 	# conversation = read_query(args.cqa_file)
 	qid_to_golden_docids = read_rank_list(args.golden_ir_file)
-	docid_to_doc = read_corpus(args.corpus_file)
+	# docid_to_doc = read_corpus(args.corpus_file)
+	print('Read CAsT2019 index for text content')
+	index = SimpleSearcher.from_prebuilt_index('cast2019')
 
 	widgets = ['Progress: ',Percentage(), ' ', Bar('#'),' ', Timer(),
 		' ', ETA(), ' ', FileTransferSpeed()]
@@ -60,8 +63,8 @@ def main():
 					# print('no negatives')
 					continue
 
-				pos_doc = docid_to_doc[pos_docid]
-				neg_doc = docid_to_doc[neg_docid]
+				pos_doc = index.doc(pos_docid).raw() #docid_to_doc[pos_docid]
+				neg_doc = index.doc(neg_docid).raw()  #docid_to_doc[neg_docid]
 				write_triplet_to_tf_record(writer,
 								   tokenizer=tokenizer,
 								   raw_query=raw_query,
