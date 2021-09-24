@@ -1,0 +1,7 @@
+pyserini==0.13.0
+faiss-cpu==1.7
+mkl==2021.2.0
+mkl-service==2.4.0
+tensorflow==1.15
+spacy==2.3.5
+progressbar
