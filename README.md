@@ -14,7 +14,7 @@ export QUERY_EMB=${DATA_DIR}/query_emb
 export QUERY_NAME=cas2019.eval
 export INDEX_PATH=${DATA_DIR}/indexes
 export INTERMEDIATE_PATH=${DATA_DIR}/intermediate
-mkidr DATA_DIR
+mkidr ${DATA_DIR}
 ```
 If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below [instruction](#Training). Or you can directly download the [checkpoint]() and start with [corpus index](#Inference).
 
@@ -99,12 +99,13 @@ do
                --data_dir=${DATA_DIR}/corpus_tfrecord \
                --embedding_file=collection.part-${i} &
 done
-# indexing using faiss
+# indexing using faiss (you can set maximum number of passages in index using --max_passage_each_index and conduct shrad search latter)
 python ./CQE/dr/index.py --index_path ${INDEX_PATH} \
      --id_to_doc_path ${DATA_DIR}/corpus_tfrecord \
      --corpus_emb_path ${CORPUS_EMB} --merge_index --passages_per_file 1000000
 ```
 ## CQE Embedding Output and Dense Search
+Here we use CAsT 2019 queries as an example.
 ```shell=bash
 python ./CQE/tfrecord_generation/gen_query_tfrecord.py \
      --query_file ./treccastweb/2019/data/evaluation/evaluation_topics_v1.0.json \
@@ -112,7 +113,7 @@ python ./CQE/tfrecord_generation/gen_query_tfrecord.py \
      --output_folder query_tfrecord \
      --output_filename ${QUERY_NAME}
 
-#Then, encode the text into conversational embeddings.
+# Encode the text into conversational embeddings.
 python ./CQE/train/main.py --use_tpu=False \
           --tpu_address=$tpu_address \
           --do_output=True \
@@ -127,7 +128,7 @@ python ./CQE/train/main.py --use_tpu=False \
           --eval_batch_size=1 \
           --doc_type=0
 
-#Shrad dense search
+# Shrad dense search
 for index in ${INDEX_PATH}/*
 do
     python ./CQE/retrieval/dense.search.py --index_file $index --intermediate_path ${INTERMEDIATE_PATH} \
@@ -139,7 +140,7 @@ python ./CQE/retrieval/merge.result.py --topk 1000 --intermediate_path ${INTERME
                          --output ${DATA_DIR}/${QUERY_NAME}.dense.result.trec \
                          --id_to_doc_path ${INDEX_PATH}/docid \
                          --id_to_query_path ${DATA_DIR}/query_tfrecord/${QUERY_NAME}.id
-#Evaluation
+# Evaluation
 python -m pyserini.eval.trec_eval -c -mndcg_cut.3,1000 \
  ${QREL_PATH} ${DATA_DIR}/${QUERY_NAME}.dense.result.trec
 python -m pyserini.eval.trec_eval -c -l 2 -mrecall.1000 \
@@ -155,13 +156,13 @@ recall_1000             all     0.7843
 ## CQE Sparse Search
 We use CQE L2 norm to select tokens from historical context and also as the term weights for BM25 search.
 ```shell=bash
-#Sparse search
+# Sparse search
 python ./CQE/retrieval/sparse.search.py --topk 1000  --threshold 10 \
              --query_text_path ${DATA_DIR}/query_tfrecord/${QUERY_NAME}.tsv \
              --vocab_file ${BERT_MODEL_DIR}/vocab.txt \
              --query_emb_path ${QUERY_EMB}/embeddings-${QUERY_NAME}.tf \
              --output ${DATA_DIR}/${QUERY_NAME}.sparse.result.trec \
-#Evaluation
+# Evaluation
 python -m pyserini.eval.trec_eval -c -mndcg_cut.3,1000 \
  ${QREL_PATH} ${DATA_DIR}/${QUERY_NAME}.sparse.result.trec
 python -m pyserini.eval.trec_eval -c -l 2 -mrecall.100,1000 \
@@ -177,7 +178,7 @@ recall_1000             all     0.7740
 ## CQE Fusion
 We directly conduct fusion on the sparse and dense ranking lists.
 ```shell=bash
-#Fusion
+# Fusion
 python ./CQE/retrieval/fuse.py --topk 1000 --rank_file0 ${DATA_DIR}/${QUERY_NAME}.dense.result.trec \
                                --rank_file1 ${DATA_DIR}/${QUERY_NAME}.sparse.result.trec \
                                --output ${DATA_DIR}/${QUERY_NAME}.fusion.result.trec \
@@ -197,17 +198,17 @@ recall_1000             all     0.8543
 ## CQE Fusion Optimized for Top Ranking
 To optimize the top fusion ranking result (NDCG@3), we tune the threshold for term selection and conduct sparse search again.
 ```shell=bash
-#Sparse search
+# Sparse search
 python ./CQE/retrieval/sparse.search.py --topk 1000 --threshold 12 \
              --query_text_path ${DATA_DIR}/query_tfrecord/${QUERY_NAME}.tsv \
              --vocab_file ${BERT_MODEL_DIR}/vocab.txt \
              --query_emb_path ${QUERY_EMB}/embeddings-${QUERY_NAME}.tf \
              --output ${DATA_DIR}/${QUERY_NAME}.sparse.result.trec \
-#Fusion
+# Fusion
 python ./CQE/retrieval/fuse.py --topk 1000 --rank_file0 ${DATA_DIR}/${QUERY_NAME}.dense.result.trec \
                                --rank_file1 ${DATA_DIR}/${QUERY_NAME}.sparse.result.trec \
                                --output ${DATA_DIR}/${QUERY_NAME}.fusion.result.trec \
-#Evaluation
+# Evaluation
 python -m pyserini.eval.trec_eval -c -mndcg_cut.3,1000 \
  ${QREL_PATH} ${DATA_DIR}/${QUERY_NAME}.fusion.result.trec
 python -m pyserini.eval.trec_eval -c -l 2 -mrecall.100,1000 \

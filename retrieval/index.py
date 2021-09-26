@@ -40,7 +40,7 @@ def main():
 	parser.add_argument("--passages_per_file", type=int, default=1000000, help='our default tf record include 1000,000 passages per file')
 	parser.add_argument("--data_type", type=str, default='16', help='16 or 32 bit')
 	parser.add_argument("--merge_index", action='store_true')
-	parser.add_argument("--max_passage_each_index", type=int, default=50000000, help='Set a passage number limitation for index')
+	parser.add_argument("--max_passage_each_index", type=int, default=None, help='Set a passage number limitation for index')
 	parser.add_argument("--quantize", action='store_true')
 	parser.add_argument("--id_to_doc_path", type=str, default=None)
 	args = parser.parse_args()
@@ -50,7 +50,6 @@ def main():
 	fout = open(os.path.join(args.index_path, 'docid'), 'w')
 	for idx in range(len(idx_to_docid)):
 		fout.write('{}\n'.format(idx_to_docid[idx]))
-	import pdb; pdb.set_trace()  # breakpoint 44d8f930 //
 
 	if not os.path.exists(args.index_path):
 		os.mkdir(args.index_path)
@@ -72,12 +71,15 @@ def main():
 
 		corpus_embs = (corpus_embs.reshape((-1, args.emb_dim)))
 		passage_num = corpus_embs.shape[0]
-
-		index_file_num = int(math.ceil((passage_num)/float(args.max_passage_each_index)))
+		if args.max_passage_each_index==None:
+			args.max_passage_each_index = passge_num
+		else: 
+			max_passage_each_index = args.max_passage_each_index
+		index_file_num = int(math.ceil((passage_num)/float(max_passage_each_index)))
 		if index_file_num > 1:
 			for i in range(index_file_num):
-				faiss_index(corpus_embs=corpus_embs[(i*args.max_passage_each_index):((i+1)*args.max_passage_each_index),:],
-					  docids=docids[(i*args.max_passage_each_index):((i+1)*args.max_passage_each_index)],
+				faiss_index(corpus_embs=corpus_embs[(i*max_passage_each_index):((i+1)*max_passage_each_index),:],
+					  docids=docids[(i*max_passage_each_index):((i+1)*max_passage_each_index)],
 					  save_path=os.path.join(args.index_path, 'index-' + str(i)),
 					  quantize=args.quantize)
 				print('index file:'+str(i))
