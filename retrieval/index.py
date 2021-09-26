@@ -42,7 +42,15 @@ def main():
 	parser.add_argument("--merge_index", action='store_true')
 	parser.add_argument("--max_passage_each_index", type=int, default=50000000, help='Set a passage number limitation for index')
 	parser.add_argument("--quantize", action='store_true')
+	parser.add_argument("--id_to_doc_path", type=str, default=None)
 	args = parser.parse_args()
+
+	idx_to_docid, docid_to_idx = read_id_dict(args.id_to_doc_path)
+	print('Write id to index folder...')
+	fout = open(os.path.join(args.index_path, 'docid'), 'w')
+	for idx in range(len(idx_to_docid)):
+		fout.write('{}\n'.format(idx_to_docid[idx]))
+	import pdb; pdb.set_trace()  # breakpoint 44d8f930 //
 
 	if not os.path.exists(args.index_path):
 		os.mkdir(args.index_path)
@@ -76,7 +84,7 @@ def main():
 		else:
 			faiss_index(corpus_embs=corpus_embs,
 				  docids=docids,
-				  save_path=os.join.path(args.index_path, 'index'),
+				  save_path=os.path.join(args.index_path, 'index'),
 				  quantize=args.quantize)
 	else:
 		num_workers = len(corpus_files)
@@ -97,7 +105,7 @@ def main():
 			# 											args.quantize)
 		pool.close()
 		pool.join()
-
+	
 
 	print('finish')
 

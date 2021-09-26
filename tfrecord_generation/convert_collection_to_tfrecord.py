@@ -15,7 +15,7 @@ from tqdm import tqdm
 from read_data import msmarco_corpus
 from multiprocessing import Pool
 import multiprocessing
-
+from pyserini.search import SimpleSearcher
 
 
 flags = tf.flags
@@ -77,6 +77,8 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
     "workers", None,
     "if None, workers are equal to number of files.")
+
+
 
 if os.path.isdir(FLAGS.corpus_path):
     assert FLAGS.corpus_prefix != None, "You have to input corpus_prefix arg"
@@ -204,15 +206,16 @@ def main():
     files = [FLAGS.corpus_path]
 
   print('Count num of line')
-  file_to_line_numer = {}
+  file_to_line_number = {}
   for file in files:
-    file_to_line_numer[file] = sum(1 for line in open(file))
+    file_to_line_number[file] = sum(1 for line in open(file))
   
   num_files = len(files)
   if (FLAGS.workers==None) or (FLAGS.workers >= num_files):
     num_workers = num_files
   else:
     num_workers = FLAGS.workers
+
   if num_workers>1:
     pool = Pool(num_workers)
     num_files_per_worker=num_files//num_workers
@@ -221,13 +224,13 @@ def main():
     for i in range(num_workers):
         f_out = os.path.join(FLAGS.output_folder, FLAGS.output_filename + '-' + str(i)) 
         for file in file_list:
-          offset+=file_to_line_numer[file]
+          offset+=file_to_line_number[file]
 
         if i==(num_workers-1): #last thread
             file_list = files[i*num_files_per_worker:]
             total_line_number = 0
             for file in file_list:
-              total_line_number += file_to_line_numer[file]
+              total_line_number += file_to_line_number[file]
             dummy_line = FLAGS.batch_size - total_line_number%(FLAGS.batch_size)
         else:
             file_list = files[i*num_files_per_worker:((i+1)*num_files_per_worker)]

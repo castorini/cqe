@@ -120,9 +120,12 @@ def main():
 	Index=Index//args.doc_word_num
 	Index = Index.reshape((-1, args.query_word_num*args.topk))
 	Distance = Distance.reshape((-1, args.query_word_num*args.topk))
-
 	pickle_file = 'shrad-'+args.index_file.split('-')[-1]
-	save_pickle(Distance, Index, os.path.join(args.intermediate_path ,pickle_file))
+	try:
+		save_pickle(Distance, Index, os.path.join(args.intermediate_path ,pickle_file))
+	except:
+		pickle_file = 'shrad-0'
+		save_pickle(Distance, Index, os.path.join(args.intermediate_path ,pickle_file))
 	print('finish')
 
 if __name__ == "__main__":

@@ -33,7 +33,12 @@ def read_id_dict(path):
 				idx_to_id[int(idx)] = Id
 				id_to_idx[Id] = int(idx)
 			except:
-				print(line+' has no id')
+				Id = line.strip()
+				idx_to_id[i] = Id
+				# if len(Id.split(' '))==1:
+
+				# else:
+				# 	print(line+' has no id')
 	return idx_to_id, id_to_idx
 
 def write_result(qidxs, Index, Score, file, idx_to_qid, idx_to_docid, topk=None, run_name='Faiss'):

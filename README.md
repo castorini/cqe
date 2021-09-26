@@ -14,6 +14,7 @@ export QUERY_EMB=${DATA_DIR}/query_emb
 export QUERY_NAME=cas2019.eval
 export INDEX_PATH=${DATA_DIR}/indexes
 export INTERMEDIATE_PATH=${DATA_DIR}/intermediate
+mkidr DATA_DIR
 ```
 If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below [instruction](#Training). Or you can directly download the [checkpoint]() and start with [corpus index](#Inference).
 
@@ -70,35 +71,38 @@ python main.py --use_tpu=False \
 
 # Inference
 ## Index corpus embedding
-We first split the corpus and convert the text into tfrecord for inference
 ```shell=bash
-split -d -l 1000000 ${DATA_DIR}/collection.tsv ${DATA_DIR}/collection.part
+# Output corpus from pyserini prebuilt cast index
+python ./CQE/tfrecord_generation/get_corpus_from_prebuilt_index.py \
+          --output_folder ${DATA_DIR}/collection --index cast2019
+split -d -l 1000000 ${DATA_DIR}/collection/collection.tsv ${DATA_DIR}/collection/collection.part
 # Convert passages in the collection
 python ./CQE/tfrecord_generation/convert_collection_to_tfrecord.py \
   --output_folder=${DATA_DIR}/corpus_tfrecord \
   --vocab_file=${BERT_MODEL_DIR}/vocab.txt \
   --max_seq_length=154 \
-  --corpus_path=${DATA_DIR} \
+  --corpus_path=${DATA_DIR}/collection \
   --corpus_prefix=collection.part \
   --doc_type=passage \
 for i in $(seq 0 38)
 do
-    srun --gres=gpu:p100:1 --mem=16G --cpus-per-task=2 --time=2:00:00 \
-    python ./CQE/train/main.py --use_tpu=False \
-                 --tpu_address=$tpu_address \
-                 --do_output=True \
-                 --bert_pretrained_dir=${BERT_MODEL_DIR} \
-                 --eval_checkpoint=${CHECKPOINT}/model.ckpt-10000 \
-                 --max_doc_length=154 \
-                 --doc_type=1 \
-                 --eval_batch_size=100 \
-                 --output_dir=${DATA_DIR}/doc_emb \
-                 --data_dir=${DATA_DIR}/corpus_tfrecord \
-                 --embedding_file=collection.part-${i} &
+  srun --gres=gpu:p100:1 --mem=16G --cpus-per-task=2 --time=2:00:00 \
+  python ./CQE/train/main.py --use_tpu=False \
+               --tpu_address=$tpu_address \
+               --do_output=True \
+               --bert_pretrained_dir=${BERT_MODEL_DIR} \
+               --eval_checkpoint=${CHECKPOINT}/model.ckpt-10000 \
+               --max_doc_length=154 \
+               --doc_type=1 \
+               --eval_batch_size=100 \
+               --output_dir=${DATA_DIR}/doc_emb \
+               --data_dir=${DATA_DIR}/corpus_tfrecord \
+               --embedding_file=collection.part-${i} &
 done
 # indexing using faiss
 python ./CQE/dr/index.py --index_path ${INDEX_PATH} \
-     --corpus_emb_path ${CORPUS_EMB} --merge_index --passages_per_file 1000000 --max_passage_each_index 10000000 \
+     --id_to_doc_path ${DATA_DIR}/corpus_tfrecord \
+     --corpus_emb_path ${CORPUS_EMB} --merge_index --passages_per_file 1000000
 ```
 ## CQE Embedding output and dense Search
 ```shell=bash
@@ -123,7 +127,7 @@ python ./CQE/train/main.py --use_tpu=False \
           --eval_batch_size=1 \
           --doc_type=0
 
-#Dense search
+#Shrad dense search
 for index in ${INDEX_PATH}/*
 do
     python ./CQE/retrieval/dense.search.py --index_file $index --intermediate_path ${INTERMEDIATE_PATH} \
@@ -133,7 +137,7 @@ done
 #Merge and output final result
 python ./CQE/retrieval/merge.result.py --topk 1000 --intermediate_path ${INTERMEDIATE_PATH} \
                          --output ${DATA_DIR}/${QUERY_NAME}.dense.result.trec \
-                         --id_to_doc_path ${DATA_DIR}/corpus_tfrecord \
+                         --id_to_doc_path ${INDEX_PATH}/docid \
                          --id_to_query_path ${DATA_DIR}/query_tfrecord/${QUERY_NAME}.id
 #Evaluation
 python -m pyserini.eval.trec_eval -c -mndcg_cut.3,1000 \
