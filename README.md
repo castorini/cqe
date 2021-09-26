@@ -19,7 +19,7 @@ mkidr DATA_DIR
 If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below [instruction](#Training). Or you can directly download the [checkpoint]() and start with [corpus index](#Inference).
 
 # Training
-## Training Data preprocess
+## Training Data Preprocess
 ```shell=bash
 export TRAIN_DATA_FOLDER=training_data
 mkdir ${TRAIN_DATA_FOLDER}
@@ -70,7 +70,7 @@ python main.py --use_tpu=False \
 ```
 
 # Inference
-## Index corpus embedding
+## Index Corpus Embedding
 ```shell=bash
 # Output corpus from pyserini prebuilt cast index
 python ./CQE/tfrecord_generation/get_corpus_from_prebuilt_index.py \
@@ -104,7 +104,7 @@ python ./CQE/dr/index.py --index_path ${INDEX_PATH} \
      --id_to_doc_path ${DATA_DIR}/corpus_tfrecord \
      --corpus_emb_path ${CORPUS_EMB} --merge_index --passages_per_file 1000000
 ```
-## CQE Embedding output and dense Search
+## CQE Embedding Output and Dense Search
 ```shell=bash
 python ./CQE/tfrecord_generation/gen_query_tfrecord.py \
      --query_file ./treccastweb/2019/data/evaluation/evaluation_topics_v1.0.json \
@@ -152,7 +152,7 @@ recall_100              all     0.5215
 recall_1000             all     0.7843
 ######################################
 ```
-## CQE sparse search
+## CQE Sparse Search
 We use CQE L2 norm to select tokens from historical context and also as the term weights for BM25 search.
 ```shell=bash
 #Sparse search
@@ -174,7 +174,7 @@ recall_100              all     0.3808
 recall_1000             all     0.7740
 ######################################
 ```
-## CQE fusion
+## CQE Fusion
 We directly conduct fusion on the sparse and dense ranking lists.
 ```shell=bash
 #Fusion
@@ -194,7 +194,7 @@ recall_100              all     0.5804
 recall_1000             all     0.8543
 ######################################
 ```
-## CQE fusion optimized for top ranking
+## CQE Fusion Optimized for Top Ranking
 To optimize the top fusion ranking result (NDCG@3), we tune the threshold for term selection and conduct sparse search again.
 ```shell=bash
 #Sparse search
