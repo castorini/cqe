@@ -1,6 +1,7 @@
 # CQE for Conversational Search
 The repo is the code for our EMNLP2021 paper:
 *[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb).
+
 If you find this work useful, please cite the following paper:
 ```
 Coming soon!
