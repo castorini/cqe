@@ -1,13 +1,18 @@
 # CQE for Conversational Search
 The repo is the code for our EMNLP2021 paper:
 *[Contextualized Query Embeddings for Conversational Search](https://arxiv.org/abs/2104.08707)* Sheng-Chieh Lin, Jheng-Hong Yang and Jimmy Lin. In this repo, we will use the data from [CAsT repo](https://github.com/daltonj/treccastweb).
+If you find this work useful, please cite the following paper:
+```
+Coming soon!
+```
 ## Prepare
 ```shell=bash
 git clone https://github.com/daltonj/treccastweb.git
 wget https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-12_H-768_A-12.zip
 unzip uncased_L-24_H-1024_A-16.zip
 export BERT_MODEL_DIR=./uncased_L-12_H-768_A-12
-export CHECKPOINT=cqe
+export CHECKPOINT=cqe_checkpoint
+export TCT-COLBERT_CHECKPOINT=tct-colbert_checkpoint
 export DATA_DIR=./cast
 export CORPUS_EMB=${DATA_DIR}/doc_emb
 export QUERY_EMB=${DATA_DIR}/query_emb
@@ -16,33 +21,33 @@ export INDEX_PATH=${DATA_DIR}/indexes
 export INTERMEDIATE_PATH=${DATA_DIR}/intermediate
 mkidr ${DATA_DIR}
 ```
-If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model]() detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below [instruction](#Training). Or you can directly download the [checkpoint]() and start with [corpus index](#Inference).
+If you want to finetuen CQE by yourself, you can download the [BM25 negative trained model](https://drive.google.com/file/d/1a32LoYM3azbxlo6eAuzjnNUyBe-2o7sB/view?usp=sharing) detailed in our [previous paper](https://github.com/castorini/tct_colbert), and follow the below [instruction](#Training). Or you can directly download the [checkpoint](https://drive.google.com/file/d/1HGjTAAkANrEYa-hJ6gk-cSWahdDLmvn3/view?usp=sharing) and start with [corpus index](#Inference).
 
 # Training
 ## Training Data Preprocess
 ```shell=bash
 export TRAIN_DATA_FOLDER=training_data
 mkdir ${TRAIN_DATA_FOLDER}
-
-# Download CANARD dataset
 cd ${TRAIN_DATA_FOLDER}
+```
+First download our psuedo relevance data from the [link](https://drive.google.com/file/d/1AI92upwFDq8J-op0zyyf3bvRSBgAswI9/view?usp=sharing) and other related public data.
+```shell=bash
+# Download CANARD dataset
 wget https://www.google.com/url?q=https%3A%2F%2Fobj.umiacs.umd.edu%2Felgohary%2FCANARD_Release.zip&sa=D&sntz=1&usg=AFQjCNFjxS-s55iJG-fpq5Ur_uakAOJILw
 unzip CANARD_Release.zip 
 
 # Download QUAC dataset
 mkdir QUAC
-cd QUAC
-wget https://s3.amazonaws.com/my89public/quac/train_v0.2.json
-wget https://s3.amazonaws.com/my89public/quac/val_v0.2.json
+wget https://s3.amazonaws.com/my89public/quac/train_v0.2.json -P QUAC
+wget https://s3.amazonaws.com/my89public/quac/val_v0.2.json -P QUAC
 cd ..
-
-# Download the rank list from reranker
-cd ..
-
+```
+Now we can start to generate training data.
+```shell=bash
 # Generate training data
 python ./CQE/tfrecord_generation/generate_train_data.py --qa_folder ${TRAIN_DATA_FOLDER}/QUAC \
                               --cqr_folder ${TRAIN_DATA_FOLDER}/CANARD_Release \
-                              --golden_ir_file ${TRAIN_DATA_FOLDER}/colbert_rank_list.tsv \
+                              --golden_ir_file ${TRAIN_DATA_FOLDER}/psuedo_rel.tsv \
                               --corpus ./castv1_corpus/collection.tsv \
                               --vocab_file ${BERT_MODEL_DIR}/vocab.txt \
                               --output_folder ${TRAIN_DATA_FOLDER}/tfrecord \
@@ -51,12 +56,11 @@ python ./CQE/tfrecord_generation/generate_train_data.py --qa_folder ${TRAIN_DATA
 ## CQE Finetuning
 ```shell=bash
 # Training 
-ctpu up --name=$tpu_address --project=$project --zone=us-central1-f  --tpu-size=v2-8  --tpu-only  --tf-version=1.15.3  --noconf
 python main.py --use_tpu=False \
-               --tpu_address=$tpu_address \
+               --tpu_address=None \
                --do_train=True \
-               --bert_pretrained_dir=$Your_GS_Folder/uncased_L-12_H-768_A-12 \
-               --init_checkpoint=${tct-colbert} \
+               --bert_pretrained_dir=${BERT_MODEL_DIR} \
+               --init_checkpoint=${TCT-COLBERT_CHECKPOINT} \
                --data_dir=${TRAIN_DATA_FOLDER}/tfrecord \
                --train_file=dataset_train_tower.tf \
                --num_train_steps=10000 \
