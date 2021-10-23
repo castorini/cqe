@@ -45,6 +45,7 @@ class index_method():
 			self.index = cpu_index
 
 
+
 def search(index, query_embs, batch_size, threads, topk, dimension):
 
 

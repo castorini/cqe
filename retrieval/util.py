@@ -127,29 +127,39 @@ def load_term_weight_tfrecords(srcfiles, dim, data_type='16', index=False, batch
 					break
 	return term_weights, docids
 
-def faiss_index(corpus_embs, docids, save_path, quantize):
+def faiss_index(corpus_embs, docids, save_path, index_method):
 
 	dimension=corpus_embs.shape[1]
-	cpu_index = faiss.IndexFlatIP(dimension)
-	cpu_index = faiss.IndexIDMap(cpu_index)
-	if quantize: # still try better way for balanced efficiency and effectiveness
+	print("Indexing ...")
+	if index_method==None or index_method=='flatip':
+		cpu_index = faiss.IndexFlatIP(dimension)
+		
+	elif index_method=='hsw':
+		cpu_index = faiss.IndexHNSWFlat(dimension, 256, faiss.METRIC_INNER_PRODUCT)
+		cpu_index.hnsw.efConstruction = 256
+	elif index_method=='quantize': # still try better way for balanced efficiency and effectiveness
+		cpu_index = faiss.IndexHNSWPQ(dimension, 192, 256)
+		cpu_index.hnsw.efConstruction = 256
+		cpu_index.metric_type = faiss.METRIC_INNER_PRODUCT
 		# ncentroids = 1000
 		# code_size = dimension//4
 		# cpu_index = faiss.IndexIVFPQ(cpu_index, dimension, ncentroids, code_size, 8)
 		# cpu_index = faiss.IndexPQ(dimension, code_size, 8)
-		cpu_index = faiss.index_factory(768, "OPQ128,IVF4096,PQ128", faiss.METRIC_INNER_PRODUCT)
-		cpu_index = faiss.IndexIDMap(cpu_index)
+		# cpu_index = faiss.index_factory(768, "OPQ128,IVF4096,PQ128", faiss.METRIC_INNER_PRODUCT)
+		# cpu_index = faiss.IndexIDMap(cpu_index)
 		# cpu_index = faiss.GpuIndexScalarQuantizer(dimension, faiss.ScalarQuantizer.QT_16bit_direct, faiss.METRIC_INNER_PRODUCT)
+		
+
+	cpu_index.verbose = True
+	cpu_index.add(corpus_embs)
+	if index_method=='quantize':
 		print("Train index...")
 		cpu_index.train(corpus_embs)
-
-
-	print("Indexing {}...".format(save_path))
-	cpu_index.add_with_ids(corpus_embs, docids)
+	print("Save Index {}...".format(save_path))
 	faiss.write_index(cpu_index, save_path)
 
 
-def load_tfrecords_and_index(srcfiles, data_num, word_num, dim, data_type, index=False, save_path=None, quantize=None, batch=1000):
+def load_tfrecords_and_index(srcfiles, data_num, word_num, dim, data_type, index=False, save_path=None, index_method=None, batch=1000):
 	def _parse_function(example_proto):
 		features = {'doc_emb': tf.FixedLenFeature([],tf.string) , #tf.FixedLenSequenceFeature([],tf.string, allow_missing=True),
 					'docid': tf.FixedLenFeature([],tf.int64)}
@@ -176,6 +186,7 @@ def load_tfrecords_and_index(srcfiles, data_num, word_num, dim, data_type, index
 		# 	raise Exception('Please assign datatype 16 or 32 bits')
 		counter = 0
 		i = 0
+
 		for srcfile in srcfiles:
 			try:
 				dataset = tf.data.TFRecordDataset(srcfile) # load tfrecord file
@@ -200,14 +211,16 @@ def load_tfrecords_and_index(srcfiles, data_num, word_num, dim, data_type, index
 					counter+=sent_num
 					pbar.update(10 * i + 1)
 					i+=sent_num
-
 				except tf.errors.OutOfRangeError:
 					break
 
 		docids = np.array(docids).reshape(-1)
 		corpus_embs = (corpus_embs[:len(docids)]).astype(np.float32)
+		mask = docids!=-1
+		docids = docids[mask]
+		corpus_embs = corpus_embs[mask]
 	if index:
-		faiss_index(corpus_embs, docids, save_path, quantize)
+		faiss_index(corpus_embs, docids, save_path, index_method)
 	else:
 		return corpus_embs, docids
 

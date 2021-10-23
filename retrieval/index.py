@@ -30,6 +30,17 @@ from multiprocessing import Pool
 # 	print("Indexing...")
 # 	cpu_index.add_with_ids(corpus_embs, docids)
 # 	faiss.write_index(cpu_index, save_path)
+def write_id(id_to_doc_path, index_path, docids=[]):
+	idx_to_docid, docid_to_idx = read_id_dict(id_to_doc_path)
+	print('Write id to index folder...')
+	fout = open(os.path.join(index_path, 'docid'), 'w')
+	if len(docids)==0:
+		for idx in range(len(idx_to_docid)):
+			fout.write('{}\n'.format(idx_to_docid[idx]))
+	else:
+		for idx in docids:
+			fout.write('{}\n'.format(idx_to_docid[idx]))
+	fout.close()
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -41,15 +52,11 @@ def main():
 	parser.add_argument("--data_type", type=str, default='16', help='16 or 32 bit')
 	parser.add_argument("--merge_index", action='store_true')
 	parser.add_argument("--max_passage_each_index", type=int, default=None, help='Set a passage number limitation for index')
-	parser.add_argument("--quantize", action='store_true')
+	parser.add_argument("--index_method", type=str, default='hsw', help='flatip, hsw or quantize')
 	parser.add_argument("--id_to_doc_path", type=str, default=None)
 	args = parser.parse_args()
 
-	idx_to_docid, docid_to_idx = read_id_dict(args.id_to_doc_path)
-	print('Write id to index folder...')
-	fout = open(os.path.join(args.index_path, 'docid'), 'w')
-	for idx in range(len(idx_to_docid)):
-		fout.write('{}\n'.format(idx_to_docid[idx]))
+	
 
 	if not os.path.exists(args.index_path):
 		os.mkdir(args.index_path)
@@ -68,11 +75,11 @@ def main():
 										   data_num=args.passages_per_file, \
 										   word_num=args.doc_word_num, \
 										   dim=args.emb_dim, data_type=args.data_type, index=False)
-
+		write_id(args.id_to_doc_path, args.index_path, docids)
 		corpus_embs = (corpus_embs.reshape((-1, args.emb_dim)))
 		passage_num = corpus_embs.shape[0]
 		if args.max_passage_each_index==None:
-			args.max_passage_each_index = passge_num
+			max_passage_each_index = passage_num
 		else: 
 			max_passage_each_index = args.max_passage_each_index
 		index_file_num = int(math.ceil((passage_num)/float(max_passage_each_index)))
@@ -81,30 +88,28 @@ def main():
 				faiss_index(corpus_embs=corpus_embs[(i*max_passage_each_index):((i+1)*max_passage_each_index),:],
 					  docids=docids[(i*max_passage_each_index):((i+1)*max_passage_each_index)],
 					  save_path=os.path.join(args.index_path, 'index-' + str(i)),
-					  quantize=args.quantize)
+					  index_method=args.index_method)
 				print('index file:'+str(i))
 		else:
 			faiss_index(corpus_embs=corpus_embs,
 				  docids=docids,
 				  save_path=os.path.join(args.index_path, 'index'),
-				  quantize=args.quantize)
+				  index_method=args.index_method)
 	else:
 		num_workers = len(corpus_files)
 		pool = Pool(num_workers)
-
+		write_id(args.id_to_doc_path, args.index_path)
 		for corpus_file in corpus_files:
 			index_split = corpus_file.split('-')[-1]
 			index_split = index_split.split('.')[0]
-
 			pool.apply_async(load_tfrecords_and_index ,([corpus_file], args.passages_per_file, args.doc_word_num,
 														args.emb_dim, args.data_type, True,
-														os.path.join(args.index_path, 'index-' + index_split),
-														args.quantize))
+														os.path.join(args.index_path, 'index-' + index_split))) #Shrad index now only support FlatIP
 
 			# load_tfrecords_and_index([corpus_file], args.passages_per_file, args.doc_word_num,
 			# 											args.emb_dim, args.data_type, True,
 			# 											os.path.join(args.index_path, 'index-' + index_split),
-			# 											args.quantize)
+			# 											args.index_method)
 		pool.close()
 		pool.join()
 	
